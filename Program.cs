@@ -32,7 +32,7 @@ namespace Extrados_txt_reader
 
                         for (int i = 0; i < columnas.Length; i++)
                         {
-                            if (columnas[i]?.Trim() == "0") //si hay un 0, lo seteo a NULL -- no esta funcionando esto
+                            if (columnas[i]?.Trim() == "0") //si hay un 0, lo seteo a NULL
                             {
                                 columnas[i] = "NULL";
                             }
