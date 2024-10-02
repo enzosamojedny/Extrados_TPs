@@ -51,10 +51,11 @@ namespace Extrados_txt_reader
                     }
                 }
                 lista.Remove(lista[0]);
-                List<string> listaDeValores = new List<string>();//elimino el titulo de las tablas
+                List<string> listaDeValores = new List<string>();//elimino el titulo de las tablas, las asigno estaticamente
 
                 
                 //problema a solucionar: el tipo de dato dentro de los insert es string...
+
                 //foreach (var item in values)
                 //{
                 //    Console.WriteLine($"Value: {item.Trim()}, Type: {item.GetType()}");
