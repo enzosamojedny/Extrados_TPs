@@ -13,6 +13,7 @@ CREATE TABLE empleados (
     fecha_egreso VARCHAR(10) DEFAULT NULL,
     FOREIGN KEY (dni) REFERENCES personas(dni)
 );
+
 CREATE TABLE vehiculos (
     id_vehiculo INT AUTO_INCREMENT PRIMARY KEY,
     patente VARCHAR(10),
@@ -21,6 +22,7 @@ CREATE TABLE vehiculos (
     id_empleado INT,
     FOREIGN KEY (id_empleado) REFERENCES empleados(id_empleado)
 );
+
 CREATE TABLE estacionamiento (
     patente VARCHAR(10),
     fecha_ingreso VARCHAR(10),
@@ -33,25 +35,26 @@ CREATE TABLE productos (
     descripcion VARCHAR(100),
     precio DECIMAL(10, 2)
 );
-CREATE TABLE venta_producto (
-	dni VARCHAR(20),
-    codigo_barra VARCHAR(20),
-    cantidad INT,
-    PRIMARY KEY (codigo_barra, dni),
-    FOREIGN KEY (codigo_barra) REFERENCES productos(codigo_barra)
-);
 
 CREATE TABLE ventas (
-    dni VARCHAR(20),
-    id_empleado INT,
+    dni VARCHAR(20), -- el que compro
+    id_empleado INT, -- el que vendio
     codigo_barra VARCHAR(20),
     fecha_hora VARCHAR(20),
-    PRIMARY KEY (dni, codigo_barra, fecha_hora),
-    FOREIGN KEY (dni) REFERENCES empleado(dni),
-    FOREIGN KEY (id_empleado) REFERENCES empleados(id_empleado),
-    FOREIGN KEY (codigo_barra) REFERENCES productos(codigo_barra)
+    PRIMARY KEY (id_empleado,fecha_hora), -- un empleado solo puede hacer una venta en una hora x
+    FOREIGN KEY (dni) REFERENCES personas(dni),
+    FOREIGN KEY (id_empleado) REFERENCES empleados(id_empleado)
 );
-create USER 'usuario_db'@'localhost' IDENTIFIED BY '123456'
+
+CREATE TABLE producto_venta( -- muchos productos a una sola venta
+	id_empleado INT, -- quien hizo la venta de los productos
+	codigo_barra VARCHAR(20), 
+    fecha_hora VARCHAR(20),
+    PRIMARY KEY(codigo_barra,fecha_hora), -- campos unicos que identifican la venta
+    FOREIGN KEY (id_empleado, fecha_hora) REFERENCES ventas(id_empleado, fecha_hora), 
+    -- cada campo en producto_venta debe corresponder a una venta en tabla ventas
+    FOREIGN KEY (codigo_barra) REFERENCES productos(codigo_barra) -- identificacion de producto
+);
 
 -- 1, 2
 CREATE VIEW empleados_sin_sueldo AS 
@@ -63,8 +66,9 @@ WHERE e.fecha_egreso IS NULL -- actuales empleados
 
 -- 3
 CREATE VIEW vehiculos_de_empleados AS
-SELECT CONCAT(v.patente, v.modelo, v.color) AS Vehiculo, CONCAT(p.nombre+' '+ p.apellido) AS Propietario,
-e.dni AS DNI, e.rol AS Rol, e.fecha_ingreso AS Ingreso, e.fecha_egreso AS Egreso
+SELECT v.id_vehiculo as Id, v.patente as Patente, v.modelo as Modelo, v.color as Color,
+ CONCAT(p.nombre+' '+ p.apellido) AS Propietario,
+e.dni AS DNI, e.rol AS Rol, e.fecha_ingreso AS Ingreso
 FROM vehiculos AS v
 INNER JOIN empleados e ON e.id_empleado = v.id_empleado
 INNER JOIN personas p ON p.dni = e.dni
@@ -78,10 +82,9 @@ INNER JOIN empleados e ON e.dni = p.dni
 WHERE e.fecha_ingreso IS NULL
 
 -- 5
--- tomar aquellos que usaron estacionamiento como los que se presentaron a trabajar
 CREATE VIEW empleados_10_octubre AS 
 SELECT CONCAT(p.nombre,' ', p.apellido) AS NombreCompleto, p.email AS Email, 
-e.dni AS DNI, e.rol AS Rol, est.fecha_ingreso AS IngresoEstacionamiento
+e.dni AS DNI, e.rol AS Rol, est.fecha_ingreso AS IngresoParking
 FROM empleados e
 INNER JOIN personas p ON p.dni = e.dni
 INNER JOIN vehiculos v ON e.id_empleado = v.id_empleado
@@ -89,12 +92,23 @@ INNER JOIN estacionamiento est ON v.patente = est.patente
 WHERE est.fecha_ingreso LIKE '10/10/2023'
 
 -- 6
-CREATE VIEW producto_comprado_36789111 AS
-SELECT p.codigo_barra, p.descripcion, p.precio, vp.cantidad
-FROM personas pe
-INNER JOIN ventas v ON pe.dni = v.dni
-INNER JOIN venta_producto vp ON v.codigo_barra = vp.codigo_barra
-INNER JOIN productos p ON vp.codigo_barra = p.codigo_barra
+CREATE VIEW producto_comprado_persona AS
+SELECT p.codigo_barra as CodigoProducto, p.descripcion, p.precio, v.fecha_hora AS FechaCompra
+FROM ventas v
+INNER JOIN personas pe ON v.dni = pe.dni -- traigo datos del comprador
+INNER JOIN producto_venta pv 
+ON v.id_empleado = pv.id_empleado
+AND v.fecha_hora = pv.fecha_hora
+INNER JOIN productos p ON pv.codigo_barra = p.codigo_barra
 WHERE pe.dni = '36789111';
 
+-- 7
+CREATE VIEW monto_total_venta AS
+SELECT COUNT(*) AS CantidadVentas,SUM(p.precio) AS MontoTotal, v.codigo_barra AS CodigoProducto, v.fecha_hora AS Fecha_Venta 
+FROM ventas v
+INNER JOIN productos p ON v.codigo_barra = p.codigo_barra -- prod asociado a una venta
+WHERE v.id_empleado = 2
+GROUP BY v.codigo_barra, v.fecha_hora;
 
+create USER 'usuario_db'@'localhost' IDENTIFIED BY '123456'
+-- grants
