@@ -111,4 +111,16 @@ WHERE v.id_empleado = 2
 GROUP BY v.codigo_barra, v.fecha_hora;
 
 create USER 'usuario_db'@'localhost' IDENTIFIED BY '123456'
--- grants
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'usuario_db'@'localhost';
+
+GRANT SELECT ON TP3.empleados_sin_sueldo TO 'usuario_db'@'localhost';
+GRANT SELECT ON TP3.vehiculos_de_empleados TO 'usuario_db'@'localhost';
+GRANT SELECT ON TP3.personas_no_empleadas TO 'usuario_db'@'localhost';
+GRANT SELECT ON TP3.empleados_10_octubre TO 'usuario_db'@'localhost';
+GRANT SELECT ON TP3.producto_comprado_persona TO 'usuario_db'@'localhost';
+GRANT SELECT ON TP3.monto_total_venta TO 'usuario_db'@'localhost';
+
+SHOW GRANTS FOR 'usuario_db'@'localhost';
+
+
+
