@@ -61,6 +61,7 @@ CREATE TABLE registros_estadia (
     FOREIGN KEY (numero_lote_estacionamiento) REFERENCES estacionamiento(numero_lote)
 );
 
+-- Tabla de logs de acciones
 CREATE TABLE logs_auditoria (
     auditoria_id INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario VARCHAR(20) NOT NULL,
@@ -70,6 +71,7 @@ CREATE TABLE logs_auditoria (
     fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de registros de limpieza
 CREATE TABLE registros_limpieza (
     id INT AUTO_INCREMENT PRIMARY KEY,
     registro_estadia_id INT,
@@ -106,9 +108,12 @@ FROM registros_estadia reg
 INNER JOIN clientes c ON c.DNI = reg.DNI_cliente;
 
 -- ACTIVIDAD 3
+-- view
 CREATE VIEW limpieza_cuarto AS
 SELECT r.numero_cuarto AS Numero_Cuarto,
        r.DNI_cliente AS DNI_Cliente,
+       c.nombre AS Nombre_Cliente,
+       r.fecha_hora_salida AS Checkout_Cliente,
        r.fecha_hora_salida + INTERVAL 30 MINUTE AS Inicio_Limpieza,
        r.fecha_hora_salida + INTERVAL 120 MINUTE AS Fin_Limpieza,
        l.id_creador AS DNI_Recepcionista,
@@ -117,7 +122,43 @@ FROM registros_limpieza l
 INNER JOIN registros_estadia r 
 ON l.registro_estadia_id = r.registro_id
 INNER JOIN recepcionistas rec
-ON l.id_creador = rec.DNI;
+ON l.id_creador = rec.DNI
+INNER JOIN clientes c
+ON r.DNI_cliente = c.DNI;
+
+-- stored procedure (la recepcionista lo ejecuta para ordenar una limpieza)
+DELIMITER //
+CREATE PROCEDURE ordenar_limpieza (
+  IN input_usuario_recepcionista VARCHAR(50),
+  IN input_numero_cuarto INT,
+  IN datetime_checkout_cliente DATETIME
+)
+BEGIN
+  DECLARE limpieza_hora DATETIME;
+
+  -- Isi se le envia un NULL como fecha, setea la fecha_hora a la actual
+  IF datetime_checkout_cliente IS NULL THEN
+    SET datetime_checkout_cliente = CURRENT_TIMESTAMP;
+  END IF;
+  -- 2 horas de limpieza, ponele
+  SET limpieza_hora = datetime_checkout_cliente + INTERVAL 120 MINUTE;
+
+  UPDATE cuartos
+  SET disponible = 1 -- el cuarto se setea como disponible cuando termina la limpieza
+  WHERE numero_cuarto = input_numero_cuarto;
+
+  SELECT c.numero_cuarto, rec.nombre AS nombre_recepcionista, limpieza_hora AS fecha_hora_limpieza
+  FROM recepcionistas rec
+  INNER JOIN cuartos c ON input_numero_cuarto = c.numero_cuarto
+  WHERE rec.nombre_usuario = input_usuario_recepcionista;
+END //
+DELIMITER ;
+
+-- ejecucion del _sp
+CALL ordenar_limpieza('laura.fernandez', 101, NULL);
+
+-- ACTIVIDAD 4
+-- -> que estacionamiento utilizo X cliente cuando visito las instalaciones
 
 
 
