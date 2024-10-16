@@ -61,7 +61,7 @@ CREATE TABLE registros_estadia (
     FOREIGN KEY (numero_lote_estacionamiento) REFERENCES estacionamiento(numero_lote)
 );
 
--- Tabla de logs de acciones
+-- modificar el trigger para que muestre el valor viejo tambien, no solo el nuevo actualizado
 CREATE TABLE logs_auditoria (
     auditoria_id INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario VARCHAR(20) NOT NULL,
@@ -71,7 +71,6 @@ CREATE TABLE logs_auditoria (
     fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de registros de limpieza
 CREATE TABLE registros_limpieza (
     id INT AUTO_INCREMENT PRIMARY KEY,
     registro_estadia_id INT,
@@ -79,26 +78,6 @@ CREATE TABLE registros_limpieza (
     FOREIGN KEY (id_creador) REFERENCES recepcionistas (DNI), -- quien mando a que se haga la limpieza
     FOREIGN KEY (registro_estadia_id) REFERENCES registros_estadia(registro_id)
 );
-
-CREATE USER 'administrador'@'localhost' IDENTIFIED BY 'admin';
-CREATE USER 'recepcionista'@'localhost' IDENTIFIED BY 'recepcionista_password';
-
-REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'administrador'@'localhost';
-REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'recepcionista'@'localhost';
-
-GRANT ALL PRIVILEGES ON TP4.* TO 'administrador'@'localhost';
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON TP4.recepcionistas TO 'recepcionista'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON TP4.cuartos TO 'recepcionista'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON TP4.estacionamiento TO 'recepcionista'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON TP4.clientes TO 'recepcionista'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON TP4.registros_estadia TO 'recepcionista'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON TP4.registros_limpieza TO 'recepcionista'@'localhost';
-
-GRANT EXECUTE ON TP4.* TO 'administrador'@'localhost';
-GRANT EXECUTE ON TP4.* TO 'recepcionista'@'localhost';
-
-FLUSH PRIVILEGES;
 
  -- ACTIVIDAD 1
 CREATE VIEW registrar_movimientos_clientes AS
@@ -126,7 +105,6 @@ ON l.id_creador = rec.DNI
 INNER JOIN clientes c
 ON r.DNI_cliente = c.DNI;
 
--- stored procedure (la recepcionista lo ejecuta para ordenar una limpieza)
 DELIMITER //
 CREATE PROCEDURE ordenar_limpieza (
   IN input_usuario_recepcionista VARCHAR(50),
@@ -154,12 +132,31 @@ BEGIN
 END //
 DELIMITER ;
 
--- ejecucion del _sp
 CALL ordenar_limpieza('laura.fernandez', 101, NULL);
 
 -- ACTIVIDAD 4
--- -> que estacionamiento utilizo X cliente cuando visito las instalaciones
+DELIMITER //
+CREATE PROCEDURE obtener_estacionamiento_cliente (
+    IN input_dni_cliente VARCHAR(20)
+)
+BEGIN
+SELECT 
+	c.nombre AS Nombre_Cliente,
+	r.fecha_hora_entrada,
+	r.fecha_hora_salida,
+	e.numero_lote AS Numero_Lote_Estacionamiento
+    FROM 
+        registros_estadia r
+    INNER JOIN 
+        clientes c ON r.DNI_cliente = c.DNI
+    LEFT JOIN 
+        estacionamiento e ON r.numero_lote_estacionamiento = e.numero_lote
+    WHERE 
+        c.DNI = input_dni_cliente;
+END //
+DELIMITER ;
 
+CALL obtener_estacionamiento_cliente('65.432.109');
 
 
 
